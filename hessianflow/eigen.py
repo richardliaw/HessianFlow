@@ -1,6 +1,7 @@
 import torch
 import math
 from torch.autograd import Variable
+import torch.distributed as dist
 import numpy as np
 
 from .utils import *
