@@ -1,5 +1,5 @@
 #*
-# @file Different utility functions 
+# @file Different utility functions
 # Copyright (c) Zhewei Yao, Amir Gholami
 # All rights reserved.
 # This file is part of HessianFlow library.
@@ -33,6 +33,7 @@ def group_product(xs, ys):
     """
     return sum([torch.sum(x * y) for (x, y) in zip(xs, ys)])
 
+
 def group_add(params, update, alpha=1):
     """
     params = params + update*alpha
@@ -40,17 +41,18 @@ def group_add(params, update, alpha=1):
     :param update: list of data
     :return:
     """
-    for i,p in enumerate(params):
-        params[i].data.add_(update[i] * alpha) 
+    for i, p in enumerate(params):
+        params[i].data.add_(update[i] * alpha)
     return params
+
 
 def normalization(v):
     """
     normalization of a list of vectors
     return: normalized vectors v
     """
-    s = group_product(v,v)
-    s = s ** 0.5
+    s = group_product(v, v)
+    s = s**0.5
     s = s.cpu().item()
     v = [vi / (s + 1e-6) for vi in v]
     return v
@@ -69,6 +71,7 @@ def get_params_grad(model):
         grads.append(param.grad + 0.)
     return params, grads
 
+
 def hessian_vector_product(gradsH, params, v):
     """
     compute the hessian vector product of Hv, where
@@ -76,6 +79,6 @@ def hessian_vector_product(gradsH, params, v):
     params is the corresponding variables,
     v is the vector.
     """
-    hv = torch.autograd.grad(gradsH, params, grad_outputs = v, only_inputs = True, retain_graph = True)
+    hv = torch.autograd.grad(
+        gradsH, params, grad_outputs=v, only_inputs=True, retain_graph=True)
     return hv
-

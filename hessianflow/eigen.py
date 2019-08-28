@@ -6,7 +6,13 @@ import numpy as np
 from .utils import *
 
 
-def get_eigen(model, inputs, targets, criterion, cuda = True, maxIter = 50, tol = 1e-3):
+def get_eigen(model,
+              inputs,
+              targets,
+              criterion,
+              cuda=True,
+              maxIter=50,
+              tol=1e-3):
     """
     compute the top eigenvalues of model parameters and
     the corresponding eigenvectors.
@@ -22,7 +28,7 @@ def get_eigen(model, inputs, targets, criterion, cuda = True, maxIter = 50, tol 
 
     outputs = model(inputs)
     loss = criterion(outputs, targets)
-    loss.backward(create_graph = True)
+    loss.backward(create_graph=True)
 
     params, gradsH = get_params_grad(model)
     v = [torch.randn(p.size()).to(device) for p in params]
@@ -38,14 +44,19 @@ def get_eigen(model, inputs, targets, criterion, cuda = True, maxIter = 50, tol 
         if eigenvalue == None:
             eigenvalue = eigenvalue_tmp
         else:
-            if abs(eigenvalue-eigenvalue_tmp)/abs(eigenvalue) < tol:
+            if abs(eigenvalue - eigenvalue_tmp) / abs(eigenvalue) < tol:
                 return eigenvalue_tmp, v
             else:
                 eigenvalue = eigenvalue_tmp
     return eigenvalue, v
 
 
-def get_eigen_full_dataset(model, dataloader, criterion, cuda = True, maxIter = 50, tol = 1e-3):
+def get_eigen_full_dataset(model,
+                           dataloader,
+                           criterion,
+                           cuda=True,
+                           maxIter=50,
+                           tol=1e-3):
     """
     compute the top eigenvalues of model parameters and
     the corresponding eigenvectors with a full dataset.
@@ -59,8 +70,7 @@ def get_eigen_full_dataset(model, dataloader, criterion, cuda = True, maxIter = 
     # If you call this functino during training, remember to change the mode back to training mode.
     model.eval()
 
-
-    params,_ = get_params_grad(model)
+    params, _ = get_params_grad(model)
     v = [torch.randn(p.size()).to(device) for p in params]
     v = normalization(v)
 
@@ -84,49 +94,54 @@ def get_eigen_full_dataset(model, dataloader, criterion, cuda = True, maxIter = 
             loss.backward(create_graph=True)
 
             params, gradsH = get_params_grad(model)
-            Hv = torch.autograd.grad(gradsH, params, grad_outputs = v, only_inputs = True, retain_graph = False)
+            Hv = torch.autograd.grad(
+                gradsH,
+                params,
+                grad_outputs=v,
+                only_inputs=True,
+                retain_graph=False)
 
             THv = [THv1 + Hv1 + 0. for THv1, Hv1 in zip(THv, Hv)]
             counter += 1
 
-        eigenvalue_tmp =group_product(THv,v).cpu().item() / float(counter)
+        eigenvalue_tmp = group_product(THv, v).cpu().item() / float(counter)
         v = normalization(THv)
 
         if eigenvalue == None:
             eigenvalue = eigenvalue_tmp
         else:
-            if abs(eigenvalue-eigenvalue_tmp)/abs(eigenvalue) < tol:
+            if abs(eigenvalue - eigenvalue_tmp) / abs(eigenvalue) < tol:
                 return eigenvalue_tmp, v
             else:
                 eigenvalue = eigenvalue_tmp
 
     return eigenvalue, v
 
-​
-def get_eigen_full_dataset_allreduce(model, dataloader, criterion, cuda = True, maxIter = 50, tol = 1e-3):
+
+def get_eigen_full_dataset_allreduce(model,
+                                     dataloader,
+                                     criterion,
+                                     maxIter=50,
+                                     tol=1e-3):
     """
     compute the top eigenvalues of model parameters and
     the corresponding eigenvectors with a full dataset.
     Notice, this is very expensive.
     """
-    if cuda:
-        device = 'cuda'
-    else:
-        device = 'cpu'
+    device = 'cuda' if torch.cuda.is_available() else 'cpu'
     # change the model to evaluation mode, otherwise the batch Normalization Layer will change.
     # If you call this functino during training, remember to change the mode back to training mode.
     model.eval()
-​
 
-    params,_ = get_params_grad(model)
+    params, _ = get_params_grad(model)
     v = [torch.randn(p.size()).to(device) for p in params]
     for v1 in v:
         dist.all_reduce(v1)
     v = normalization(v)
-​
+
     batch_size = None
     eigenvalue = None
-​
+
     for i in range(maxIter):
         THv = [torch.zeros(p.size()).to(device) for p in params]
         counter = 0
@@ -142,25 +157,30 @@ def get_eigen_full_dataset_allreduce(model, dataloader, criterion, cuda = True, 
             outputs = model(inputs.to(device))
             loss = criterion(outputs, targets.to(device))
             loss.backward(create_graph=True)
-​
+
             params, gradsH = get_params_grad(model)
-            Hv = torch.autograd.grad(gradsH, params, grad_outputs = v, only_inputs = True, retain_graph = False)
-​
+            Hv = torch.autograd.grad(
+                gradsH,
+                params,
+                grad_outputs=v,
+                only_inputs=True,
+                retain_graph=False)
+
             THv = [THv1 + Hv1 + 0. for THv1, Hv1 in zip(THv, Hv)]
             counter += 1
-​
+
         for THv1 in THv:
             dist.all_reduce(THv1)
 
-        eigenvalue_tmp =group_product(THv,v).cpu().item() / float(counter)
+        eigenvalue_tmp = group_product(THv, v).cpu().item() / float(counter)
         v = normalization(THv)
 
         if eigenvalue == None:
             eigenvalue = eigenvalue_tmp
         else:
-            if abs(eigenvalue-eigenvalue_tmp)/abs(eigenvalue) < tol:
+            if abs(eigenvalue - eigenvalue_tmp) / abs(eigenvalue) < tol:
                 return eigenvalue_tmp, v
             else:
                 eigenvalue = eigenvalue_tmp
-​
+
     return eigenvalue, v

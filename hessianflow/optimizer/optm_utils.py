@@ -1,4 +1,3 @@
-
 #*
 # @file optm_utils.py different utility functions
 # This file is part of HessianFlow library.
@@ -27,7 +26,7 @@ from torch.autograd import Variable
 from .progressbar import progress_bar
 
 
-def fgsm(model, data, target, eps, cuda = True):
+def fgsm(model, data, target, eps, cuda=True):
     """Generate an adversarial pertubation using the fast gradient sign method.
 
     Args:
@@ -40,14 +39,15 @@ def fgsm(model, data, target, eps, cuda = True):
     model.zero_grad()
     output = model(data)
     loss = F.cross_entropy(output, target)
-    loss.backward(create_graph = False)
+    loss.backward(create_graph=False)
     pertubation = eps * torch.sign(data.grad.data)
     x_fgsm = data.data + pertubation
     X_adv = torch.clamp(x_fgsm, torch.min(data.data), torch.max(data.data))
 
     return X_adv.cpu()
 
-def exp_lr_scheduler(optimizer, decay_ratio = 0.1):
+
+def exp_lr_scheduler(optimizer, decay_ratio=0.1):
     """
     Decay learning rate by a factor of lr_decay 
     """
@@ -55,7 +55,7 @@ def exp_lr_scheduler(optimizer, decay_ratio = 0.1):
         param_group['lr'] *= decay_ratio
     return optimizer
 
-    
+
 def test(model, test_loader):
     """
     Evaluation the performance of model on test_loader
@@ -72,7 +72,8 @@ def test(model, test_loader):
             total += targets.size(0)
             correct += predicted.eq(targets).sum().item()
 
-            progress_bar(batch_idx, len(test_loader), 'Acc: %.3f%% (%d/%d)'
-                         % (100. * correct/total, correct, total))
+            progress_bar(
+                batch_idx, len(test_loader), 'Acc: %.3f%% (%d/%d)' %
+                (100. * correct / total, correct, total))
 
     return correct * 100 / total
