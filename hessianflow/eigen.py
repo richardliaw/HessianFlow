@@ -189,4 +189,4 @@ def get_eigen_full_dataset_allreduce(model,
             else:
                 eigenvalue = eigenvalue_tmp
     # print(type(eigenvalue), type(v))
-    return eigenvalue, v.cpu()
+    return eigenvalue, [g.cpu() for g in v]
