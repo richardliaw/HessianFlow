@@ -3,6 +3,7 @@ import math
 from torch.autograd import Variable
 import torch.distributed as dist
 import numpy as np
+import time
 
 from .utils import *
 
@@ -144,10 +145,11 @@ def get_eigen_full_dataset_allreduce(model,
     eigenvalue = None
 
     for i in range(maxIter):
+        print("Hessian Calc: iter", i)
         THv = [torch.zeros(p.size()).to(device) for p in params]
         counter = 0
         for inputs, targets in dataloader:
-
+            start = time.time()
             if batch_size == None:
                 batch_size = targets.size(0)
 
@@ -169,9 +171,12 @@ def get_eigen_full_dataset_allreduce(model,
 
             THv = [THv1 + Hv1 + 0. for THv1, Hv1 in zip(THv, Hv)]
             counter += 1
+            print("Batch time: ", time.time() - start)
 
+        start = time.time()
         for THv1 in THv:
             dist.all_reduce(THv1)
+        print("All-reduce time: ", time.time() - start)
 
         eigenvalue_tmp = group_product(THv, v).cpu().item() / float(counter)
         v = normalization(THv)
@@ -183,5 +188,5 @@ def get_eigen_full_dataset_allreduce(model,
                 return eigenvalue_tmp, v
             else:
                 eigenvalue = eigenvalue_tmp
-
+    print(eigenvalue, v)
     return eigenvalue, v
